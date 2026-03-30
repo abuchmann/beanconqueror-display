@@ -1,0 +1,24 @@
+#pragma once
+
+// WiFi
+#define WIFI_SSID "YOUR_WIFI_SSID"
+#define WIFI_PASSWORD "YOUR_WIFI_PASSWORD"
+#define WIFI_CONNECT_TIMEOUT_MS 15000
+
+// MQTT
+#define MQTT_BROKER "192.168.1.100"
+#define MQTT_PORT 1883
+#define MQTT_USER "YOUR_MQTT_USER"
+#define MQTT_PASSWORD "YOUR_MQTT_PASSWORD"
+#define MQTT_TOPIC_PREFIX "beanconqueror"
+#define MQTT_CONNECT_TIMEOUT_MS 10000
+
+// Deep sleep interval (microseconds) — 5 minutes default
+#define SLEEP_INTERVAL_US (5 * 60 * 1000000ULL)
+
+// E-Paper display pins (ESP32 VSPI)
+#define EPD_BUSY 4
+#define EPD_RST  16
+#define EPD_DC   17
+#define EPD_CS   5
+// CLK = 18 (SCK), DIN = 23 (MOSI) — hardware SPI defaults
