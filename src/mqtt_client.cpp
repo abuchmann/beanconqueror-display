@@ -2,24 +2,16 @@
 #include "config.h"
 #include <Arduino.h>
 
-char mqttPayloadBrews[4096] = {0};
-char mqttPayloadBeans[2048] = {0};
-bool brewsReceived = false;
-bool beansReceived = false;
+char mqttPayloadRecipes[4096] = {0};
+bool recipesReceived = false;
 
-static const char *topicBrews = MQTT_TOPIC_PREFIX "/brews/recent";
-static const char *topicBeans = MQTT_TOPIC_PREFIX "/beans/active";
+static const char *topicRecipes = MQTT_TOPIC_PREFIX "/beans/recipes";
 
 static void mqttCallback(char *topic, byte *payload, unsigned int length) {
-    if (strcmp(topic, topicBrews) == 0 && length < sizeof(mqttPayloadBrews)) {
-        memcpy(mqttPayloadBrews, payload, length);
-        mqttPayloadBrews[length] = '\0';
-        brewsReceived = true;
-        Serial.printf("MQTT: received %s (%u bytes)\n", topic, length);
-    } else if (strcmp(topic, topicBeans) == 0 && length < sizeof(mqttPayloadBeans)) {
-        memcpy(mqttPayloadBeans, payload, length);
-        mqttPayloadBeans[length] = '\0';
-        beansReceived = true;
+    if (strcmp(topic, topicRecipes) == 0 && length < sizeof(mqttPayloadRecipes)) {
+        memcpy(mqttPayloadRecipes, payload, length);
+        mqttPayloadRecipes[length] = '\0';
+        recipesReceived = true;
         Serial.printf("MQTT: received %s (%u bytes)\n", topic, length);
     }
 }
@@ -46,16 +38,15 @@ bool mqttConnect(PubSubClient &client) {
 }
 
 void mqttSubscribe(PubSubClient &client) {
-    client.subscribe(topicBrews, 1);
-    client.subscribe(topicBeans, 1);
+    client.subscribe(topicRecipes, 1);
     Serial.println("MQTT: subscribed to topics");
 }
 
 bool mqttWaitForMessages(PubSubClient &client, unsigned long timeoutMs) {
     unsigned long start = millis();
-    while ((!brewsReceived || !beansReceived) && millis() - start < timeoutMs) {
+    while (!recipesReceived && millis() - start < timeoutMs) {
         client.loop();
         delay(10);
     }
-    return brewsReceived && beansReceived;
+    return recipesReceived;
 }

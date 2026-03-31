@@ -68,7 +68,7 @@ void setup() {
 
     // Parse JSON into display data
     DisplayData data;
-    if (!parseDisplayData(mqttPayloadBrews, mqttPayloadBeans, data)) {
+    if (!parseDisplayData(mqttPayloadRecipes, data)) {
         Serial.println("Failed to parse MQTT data");
         if (bootCount == 1) {
             drawError(display, "Data Error");

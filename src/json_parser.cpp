@@ -11,92 +11,35 @@ static void safeStrCopy(char *dest, const char *src, size_t maxLen) {
     }
 }
 
-bool parseDisplayData(const char *brewsJson, const char *beansJson, DisplayData &out) {
+bool parseDisplayData(const char *recipesJson, DisplayData &out) {
     memset(&out, 0, sizeof(out));
 
-    // Parse active beans to build a roaster lookup
-    ActiveBean activeBeans[MAX_ACTIVE_BEANS];
-    int beanCount = 0;
-
-    {
-        JsonDocument beansDoc;
-        DeserializationError err = deserializeJson(beansDoc, beansJson);
-        if (err) {
-            Serial.printf("JSON: beans parse error: %s\n", err.c_str());
-            return false;
-        }
-
-        JsonArray arr = beansDoc.as<JsonArray>();
-        for (JsonObject bean : arr) {
-            if (beanCount >= MAX_ACTIVE_BEANS) break;
-            safeStrCopy(activeBeans[beanCount].name, bean["name"], sizeof(ActiveBean::name));
-            safeStrCopy(activeBeans[beanCount].roaster, bean["roaster"], sizeof(ActiveBean::roaster));
-            beanCount++;
-        }
+    JsonDocument doc;
+    DeserializationError err = deserializeJson(doc, recipesJson);
+    if (err) {
+        Serial.printf("JSON: parse error: %s\n", err.c_str());
+        return false;
     }
 
-    // Parse recent brews
-    RecentBrew recentBrews[MAX_RECENT_BREWS];
-    int brewCount = 0;
-
-    {
-        JsonDocument brewsDoc;
-        DeserializationError err = deserializeJson(brewsDoc, brewsJson);
-        if (err) {
-            Serial.printf("JSON: brews parse error: %s\n", err.c_str());
-            return false;
-        }
-
-        JsonArray arr = brewsDoc["brews"].as<JsonArray>();
-        for (JsonObject brew : arr) {
-            if (brewCount >= MAX_RECENT_BREWS) break;
-            RecentBrew &b = recentBrews[brewCount];
-            safeStrCopy(b.bean_name, brew["bean_name"], sizeof(RecentBrew::bean_name));
-            safeStrCopy(b.grind_size, brew["grind_size"], sizeof(RecentBrew::grind_size));
-            b.grind_weight = brew["grind_weight"] | 0.0f;
-            b.brew_temperature = brew["brew_temperature"] | 0.0f;
-            b.brew_beverage_quantity = brew["brew_beverage_quantity"] | 0.0f;
-            b.brew_time = brew["brew_time"] | 0;
-            brewCount++;
-        }
-    }
-
-    // Build recipes: most recent brew per bean (brews are already newest-first)
+    JsonArray arr = doc.as<JsonArray>();
     out.recipe_count = 0;
-    for (int i = 0; i < brewCount && out.recipe_count < MAX_RECIPES; i++) {
-        const RecentBrew &brew = recentBrews[i];
 
-        // Skip if we already have a recipe for this bean
-        bool seen = false;
-        for (int j = 0; j < out.recipe_count; j++) {
-            if (strcmp(out.recipes[j].bean_name, brew.bean_name) == 0) {
-                seen = true;
-                break;
-            }
-        }
-        if (seen) continue;
-
-        BeanRecipe &recipe = out.recipes[out.recipe_count];
-        safeStrCopy(recipe.bean_name, brew.bean_name, sizeof(BeanRecipe::bean_name));
-        safeStrCopy(recipe.grind_size, brew.grind_size, sizeof(BeanRecipe::grind_size));
-        recipe.grind_weight = brew.grind_weight;
-        recipe.brew_temperature = brew.brew_temperature;
-        recipe.brew_beverage_quantity = brew.brew_beverage_quantity;
-        recipe.brew_time = brew.brew_time;
-
-        // Look up roaster from active beans
-        recipe.roaster[0] = '\0';
-        for (int k = 0; k < beanCount; k++) {
-            if (strcmp(activeBeans[k].name, brew.bean_name) == 0) {
-                safeStrCopy(recipe.roaster, activeBeans[k].roaster, sizeof(BeanRecipe::roaster));
-                break;
-            }
-        }
-
+    for (JsonObject recipe : arr) {
+        if (out.recipe_count >= MAX_RECIPES) break;
+        BeanRecipe &r = out.recipes[out.recipe_count];
+        safeStrCopy(r.bean_name, recipe["bean_name"], sizeof(r.bean_name));
+        safeStrCopy(r.roaster, recipe["roaster"], sizeof(r.roaster));
+        safeStrCopy(r.grind_size, recipe["grind_size"], sizeof(r.grind_size));
+        safeStrCopy(r.ratio, recipe["ratio"], sizeof(r.ratio));
+        safeStrCopy(r.preparation_name, recipe["preparation_name"], sizeof(r.preparation_name));
+        r.grind_weight = recipe["grind_weight"] | 0.0f;
+        r.brew_temperature = recipe["brew_temperature"] | 0.0f;
+        r.brew_beverage_quantity = recipe["brew_beverage_quantity"] | 0.0f;
+        r.brew_quantity = recipe["brew_quantity"] | 0.0f;
+        r.brew_time = recipe["brew_time"] | 0;
         out.recipe_count++;
     }
 
-    Serial.printf("JSON: parsed %d recipes from %d brews and %d beans\n",
-                  out.recipe_count, brewCount, beanCount);
+    Serial.printf("JSON: parsed %d bean recipes\n", out.recipe_count);
     return out.recipe_count > 0;
 }
